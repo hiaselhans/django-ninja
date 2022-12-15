@@ -307,7 +307,7 @@ class OpenAPISchema(dict):
             resolve_allOf(prop_details, definitions)
             if len(prop_details["allOf"]) == 1 and "enum" in prop_details["allOf"][0]:
                 # is_required = "default" not in prop_details
-                yield prop_name, prop_details, prop_required
+                yield prop_name, prop_details["allOf"][0], prop_required
             else:
                 for item in prop_details["allOf"]:
                     yield from self.flatten_properties("", item, True, definitions)
@@ -318,7 +318,7 @@ class OpenAPISchema(dict):
 
             if "enum" in definition:
                 self.parameters[def_name] = definition
-                prop_details["$ref"] = f"#/parameters/schemas/{def_name}"
+                prop_details["$ref"] = f"#/parameters/{def_name}"
                 yield prop_name, prop_details, prop_required
             else:
                 yield from self.flatten_properties(prop_name, definition, prop_required, definitions)
