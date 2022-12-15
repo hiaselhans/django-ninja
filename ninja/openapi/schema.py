@@ -40,12 +40,14 @@ def get_schema(api: "NinjaAPI", path_prefix: str = "") -> "OpenAPISchema":
     openapi = OpenAPISchema(api, path_prefix)
     return openapi
 
+# https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.2.md
 
 class OpenAPISchema(dict):
     def __init__(self, api: "NinjaAPI", path_prefix: str) -> None:
         self.api = api
         self.path_prefix = path_prefix
         self.schemas: DictStrAny = {}
+        self.parameters: DictStrAny = {}
         self.securitySchemes: DictStrAny = {}
         self.all_operation_ids: Set = set()
         super().__init__(
@@ -136,7 +138,8 @@ class OpenAPISchema(dict):
 
         required = set(schema.get("required", []))
         properties = schema["properties"]
-        self.add_schema_definitions(schema.get("definitions", {}))
+
+        self.parameters.update(schema.get("definitions", {}))
 
         for name, details in properties.items():
             is_required = name in required
@@ -273,7 +276,11 @@ class OpenAPISchema(dict):
         return result
 
     def get_components(self) -> DictStrAny:
-        result = {"schemas": self.schemas}
+        result = {
+            "schemas": self.schemas,
+            "parameters": self.parameters
+        }
+
         if self.securitySchemes:
             result["securitySchemes"] = self.securitySchemes
         return result
