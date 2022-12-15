@@ -139,14 +139,12 @@ class OpenAPISchema(dict):
         required = set(schema.get("required", []))
         properties = schema["properties"]
 
-        self.parameters.update(schema.get("definitions", {}))
-
         for name, details in properties.items():
             is_required = name in required
             p_name: str
             p_schema: DictStrAny
             p_required: bool
-            for p_name, p_schema, p_required in flatten_properties(
+            for p_name, p_schema, p_required in self.flatten_properties(
                 name, details, is_required, schema.get("definitions", {})
             ):
                 param = {
@@ -294,32 +292,44 @@ class OpenAPISchema(dict):
         self.schemas.update(definitions)
 
 
-def flatten_properties(
-    prop_name: str,
-    prop_details: DictStrAny,
-    prop_required: bool,
-    definitions: DictStrAny,
-) -> Generator[Tuple[str, DictStrAny, bool], None, None]:
-    """
-    extracts all nested model's properties into flat properties
-    (used f.e. in GET params with multiple arguments and models)
-    """
-    if "allOf" in prop_details:
-        resolve_allOf(prop_details, definitions)
-        if len(prop_details["allOf"]) == 1 and "enum" in prop_details["allOf"][0]:
-            # is_required = "default" not in prop_details
-            yield prop_name, prop_details, prop_required
-        else:
-            for item in prop_details["allOf"]:
-                yield from flatten_properties("", item, True, definitions)
+    def flatten_properties(
+        self,
+        prop_name: str,
+        prop_details: DictStrAny,
+        prop_required: bool,
+        definitions: DictStrAny,
+    ) -> Generator[Tuple[str, DictStrAny, bool], None, None]:
+        """
+        extracts all nested model's properties into flat properties
+        (used f.e. in GET params with multiple arguments and models)
+        """
+        if "allOf" in prop_details:
+            resolve_allOf(prop_details, definitions)
+            if len(prop_details["allOf"]) == 1 and "enum" in prop_details["allOf"][0]:
+                # is_required = "default" not in prop_details
+                yield prop_name, prop_details, prop_required
+            else:
+                for item in prop_details["allOf"]:
+                    yield from self.flatten_properties("", item, True, definitions)
+        
+        elif "$ref" in prop_details:
+            def_name = prop_details["$ref"].split("/")[-1]
+            definition = definitions[def_name]
 
-    elif "properties" in prop_details:
-        required = set(prop_details.get("required", []))
-        for k, v in prop_details["properties"].items():
-            is_required = k in required
-            yield from flatten_properties(k, v, is_required, definitions)
-    else:
-        yield prop_name, prop_details, prop_required
+            if "enum" in definition:
+                self.parameters[def_name] = definition
+                prop_details["$ref"] = f"#/parameters/schemas/{def_name}"
+                yield prop_name, prop_details, prop_required
+            else:
+                yield from self.flatten_properties(prop_name, definition, prop_required, definitions)
+
+        elif "properties" in prop_details:
+            required = set(prop_details.get("required", []))
+            for k, v in prop_details["properties"].items():
+                is_required = k in required
+                yield from self.flatten_properties(k, v, is_required, definitions)
+        else:
+            yield prop_name, prop_details, prop_required
 
 
 def resolve_allOf(details: DictStrAny, definitions: DictStrAny) -> None:
