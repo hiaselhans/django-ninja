@@ -316,7 +316,7 @@ class OpenAPISchema(dict):
             def_name = prop_details["$ref"].split("/")[-1]
             definition = definitions[def_name]
 
-            if "enum" in definition:
+            if "enum" in definition and False:
                 self.parameters[def_name] = definition
                 prop_details["$ref"] = f"#/parameters/{def_name}"
                 yield prop_name, prop_details, prop_required
