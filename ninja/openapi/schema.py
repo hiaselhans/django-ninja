@@ -129,14 +129,14 @@ class OpenAPISchema(dict):
                 result.extend(self._extract_parameters(model))
         return result
 
-    @classmethod
-    def _extract_parameters(cls, model: TModel) -> List[DictStrAny]:
+    def _extract_parameters(self, model: TModel) -> List[DictStrAny]:
         result = []
 
         schema = model_schema(cast(Type[BaseModel], model), ref_prefix=REF_PREFIX)
 
         required = set(schema.get("required", []))
         properties = schema["properties"]
+        self.add_schema_definitions(schema.get("definitions", {}))
 
         for name, details in properties.items():
             is_required = name in required
