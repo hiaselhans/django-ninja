@@ -1,3 +1,4 @@
+import enum
 from typing import List, Union
 from unittest.mock import Mock
 
@@ -24,6 +25,14 @@ class TypeA(Schema):
 class TypeB(Schema):
     b: str
 
+class TypeEnum(str, enum.Enum):
+    x = "X"
+    y = "Y"
+
+class QueryParams(Schema):
+    a: TypeEnum
+    b: TypeEnum = TypeEnum.x
+    c: float
 
 def to_camel(string: str) -> str:
     return "".join(word.capitalize() for word in string.split("_"))
@@ -63,8 +72,12 @@ def method_body_schema(request, data: Payload):
     return dict(i=data.i, f=data.f)
 
 
-@api.get("/test-path/{int:i}/{f}", response=Response)
-def method_path(request, i: int, f: float):
+@api.get("/test-query", response=Response)
+def method_query(request, q: QueryParams=Query(...)):
+    return []
+
+@api.get("/test-path/{int:i}/{f}/{g}", response=Response)
+def method_path(request, i: int, f: float, g: TypeEnum):
     return dict(i=i, f=f)
 
 
@@ -367,9 +380,47 @@ def test_schema_body_schema(schema):
         }
     }
 
+def test_schema_query(schema):
+    method = schema["paths"]["/api/test-query"]["get"]
+
+    assert method["parameters"] == [
+        {
+            'description': 'An enumeration.',
+            'in': 'query',
+            'name': 'a',
+            'required': True,
+            'schema': {
+                'description': 'An enumeration.',
+                'enum': ['X', 'Y'],
+                'title': 'TypeEnum',
+                'type': 'string'
+            }
+        },
+        {
+            'description': 'An enumeration.',
+            'in': 'query',
+            'name': 'b',
+            'required': False,
+            'schema': {
+                'description': 'An enumeration.',
+                'enum': ['X', 'Y'],
+                'title': 'TypeEnum',
+                'type': 'string'
+            }
+        },
+        {
+            'in': 'query',
+            'name': 'c',
+            'required': True,
+            'schema': {
+                'title': 'C',
+                'type': 'number'
+            }
+        }
+    ]
 
 def test_schema_path(schema):
-    method_list = schema["paths"]["/api/test-path/{i}/{f}"]["get"]
+    method_list = schema["paths"]["/api/test-path/{i}/{f}/{g}"]["get"]
 
     assert "requestBody" not in method_list
 
@@ -384,6 +435,17 @@ def test_schema_path(schema):
             "in": "path",
             "name": "f",
             "schema": {"title": "F", "type": "number"},
+            "required": True,
+        },
+        {
+            "description": "An enumeration.",
+            "in": "path",
+            "name": "g",
+            "schema": {
+                'description': 'An enumeration.',
+                'enum': ['X', 'Y'],
+                'title': 'TypeEnum',
+                'type': 'string'},
             "required": True,
         },
     ]
