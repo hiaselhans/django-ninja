@@ -47,7 +47,6 @@ class OpenAPISchema(dict):
         self.api = api
         self.path_prefix = path_prefix
         self.schemas: DictStrAny = {}
-        self.parameters: DictStrAny = {}
         self.securitySchemes: DictStrAny = {}
         self.all_operation_ids: Set = set()
         super().__init__(
@@ -131,7 +130,8 @@ class OpenAPISchema(dict):
                 result.extend(self._extract_parameters(model))
         return result
 
-    def _extract_parameters(self, model: TModel) -> List[DictStrAny]:
+    @classmethod
+    def _extract_parameters(cls, model: TModel) -> List[DictStrAny]:
         result = []
 
         schema = model_schema(cast(Type[BaseModel], model), ref_prefix=REF_PREFIX)
@@ -144,7 +144,7 @@ class OpenAPISchema(dict):
             p_name: str
             p_schema: DictStrAny
             p_required: bool
-            for p_name, p_schema, p_required in self.flatten_properties(
+            for p_name, p_schema, p_required in flatten_properties(
                 name, details, is_required, schema.get("definitions", {})
             ):
                 param = {
@@ -274,10 +274,7 @@ class OpenAPISchema(dict):
         return result
 
     def get_components(self) -> DictStrAny:
-        result = {
-            "schemas": self.schemas,
-            "parameters": self.parameters
-        }
+        result = {"schemas": self.schemas}
 
         if self.securitySchemes:
             result["securitySchemes"] = self.securitySchemes
