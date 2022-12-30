@@ -12,9 +12,14 @@ class Event(models.Model):
     )
     start_date = models.DateField()
     end_date = models.DateField()
+    comment = models.TextField(default="", blank=True)
 
     def __str__(self):
         return self.title
+
+    def __save__(self, *args, **kwargs):
+        self.full_clean()
+        super().save()
 
 
 class Client(models.Model):

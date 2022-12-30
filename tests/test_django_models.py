@@ -8,9 +8,12 @@ from someapp.models import Event
 def test_with_client(client: Client):
     assert Event.objects.count() == 0
 
-    test_item = {"start_date": "2020-01-01", "end_date": "2020-01-02", "title": "test"}
+    test_item_create = {"start_date": "2020-01-01", "end_date": "2020-01-02", "title": "test", "comment": None}
+    test_item = test_item_create.copy()
+    test_item["comment"] = ""
 
-    response = client.post("/api/events/create", **json_payload(test_item))
+    response = client.post("/api/events/create", **json_payload(test_item_create))
+    assert "detail" not in response.json()
     assert response.status_code == 200
     assert Event.objects.count() == 1
 

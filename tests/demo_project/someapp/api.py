@@ -15,6 +15,7 @@ class EventSchema(BaseModel):
     title: str
     start_date: date
     end_date: date
+    comment: str = ""
 
     class Config:
         orm_mode = True
